@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Drift // System Override</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600;800&display=swap');
+
+        :root {
+            --primary: #6366f1;
+            --accent: #ec4899;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            background-color: #050505;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+        }
+
+        /* Scanline Effect overlay */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 30;
+            pointer-events: auto;
+        }
+
+        .back-button a {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #ffffff;
+            padding: 0.7rem 1.6rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(6px);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .back-button a::before {
+            content: '←';
+            font-size: 1rem;
+        }
+
+        .back-button a:hover {
+            transform: translateY(-2px);
+            border-color: #fff;
+        }
+
+        /* UI Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .glass-panel {
+            pointer-events: auto;
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            padding: 2.5rem 3rem;
+            border-radius: 32px;
+            text-align: center;
+            box-shadow: 0 40px 80px -12px rgba(0, 0, 0, 0.8);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90%;
+            min-width: 320px;
+            position: relative;
+        }
+
+        /* Global Coin Display */
+        #global-currency {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fbbf24;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .orb-icon {
+            width: 14px;
+            height: 14px;
+            background: #fbbf24;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #fbbf24;
+            border: 2px solid #fff;
+        }
+
+        /* Typography */
+        h1.logo {
+            font-size: 5rem;
+            font-weight: 800;
+            line-height: 0.9;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 50px rgba(99, 102, 241, 0.5);
+            letter-spacing: -4px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+        
+        .mode-select {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            justify-content: center;
+        }
+
+        button {
+            background: white;
+            color: black;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Outfit', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        /* The Big Pulse Play Button */
+        button.pulse-btn {
+            font-size: 1.5rem;
+            padding: 1.2rem 4rem;
+            border-radius: 99px;
+            background: white;
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+            animation: pulse 2s infinite;
+        }
+
+        button.menu-btn-large {
+            font-size: 1.2rem;
+            padding: 1rem 3rem;
+            border-radius: 99px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            margin-top: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        button.menu-btn-large:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+            border-color: white;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 20px rgba(255, 255, 255, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+            }
+        }
+
+        button.pulse-btn:hover {
+            animation: none;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
+        }
+
+        button.secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        button.mode-btn {
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+            min-width: 140px;
+        }
+        
+        button.mode-btn:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-5px);
+            border-color: rgba(255,255,255,0.4);
+        }
+        
+        button.mode-btn span {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 5px;
+            font-weight: 400;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .hud-item {
+            text-align: left;
+        }
+        
+        /* Note: Currency is now global, removed right hud item */
+
+        .hud-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #64748b;
+        }
+
+        .hud-value {
+            font-size: 2.5rem;
+            font-weight: 600;
+            line-height: 1;
+            color: white;
+        }
+
+        #active-powerup {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            padding: 0.5rem 1.5rem;
+            border-radius: 99px;
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        #mode-indicator {
+            position: absolute;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            letter-spacing: 4px;
+            opacity: 0.5;
+            text-transform: uppercase;
+        }
+
+        /* Shop Grid */
+        #shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        /* Scrollbar for shop */
+        #shop-grid::-webkit-scrollbar { width: 4px; }
+        #shop-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+        .shop-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shop-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .shop-item.active {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .shop-item.locked {
+            opacity: 0.5;
+        }
+
+        .item-name { font-size: 0.9rem; font-weight: 600; }
+        .item-cost { font-size: 0.8rem; color: #94a3b8; margin-top: 2px;}
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+        
+        .fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #powerup-reference {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 20;
+            width: min(320px, 80vw);
+            background: rgba(5,5,5,0.85);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 18px;
+            padding: 1rem 1.3rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            pointer-events: auto;
+        }
+
+        #powerup-reference h3 {
+            margin: 0 0 0.4rem 0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3rem;
+            color: #94a3b8;
+        }
+
+        #powerup-reference ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        #powerup-reference li {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+        }
+
+        #powerup-reference .indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 12px currentColor;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <div class="back-button">
+        <a href="main.html">Back to GF Games</a>
+    </div>
+
+    <!-- Always Visible Currency -->
+    <div id="global-currency">
+        <div class="orb-icon"></div>
+        <span id="currency-display">0</span>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-item">
+            <div class="hud-label">Score</div>
+            <div class="hud-value" id="score-val">0</div>
+        </div>
+        <div id="mode-indicator">DRIFT MODE</div>
+        <!-- Right side empty now as currency is global -->
+        <div class="hud-item right"></div> 
+        <div id="active-powerup">TIME WARP</div>
+    </div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        
+        <!-- SPLASH SCREEN (Clean Menu) -->
+        <div id="splash-screen" class="glass-panel" style="background: transparent; border: none; box-shadow: none;">
+            <h1 class="logo">NEON<br>DRIFT</h1>
+            
+            <div style="margin-top: 2rem;">
+                <button class="pulse-btn" id="btn-splash-play">INITIATE</button>
+            </div>
+
+            <div>
+                 <button class="menu-btn-large" id="btn-splash-skins">SKINS</button>
+            </div>
+            
+             <div style="margin-top: 3rem; opacity: 0.5; font-size: 0.8rem; letter-spacing: 2px;">
+                HIGH SCORE: <span id="splash-highscore">0</span>
+            </div>
+        </div>
+
+        <!-- MODE SELECT SCREEN -->
+        <div id="mode-screen" class="glass-panel hidden">
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">SELECT PROTOCOL</h2>
+            <div class="subtitle">CHOOSE DIFFICULTY</div>
+            
+            <div class="mode-select">
+                <button class="mode-btn" id="btn-drift">
+                    DRIFT
+                    <span>NORMAL SPEED</span>
+                </button>
+                <button class="mode-btn" id="btn-hyper" style="border-color: #ec4899; color: #fbcfe8;">
+                    HYPER
+                    <span>FAST • HIGH SCORE</span>
+                </button>
+            </div>
+
+            <div class="btn-group">
+                <button class="secondary" id="btn-mode-back">Back</button>
+            </div>
+        </div>
+
+        <!-- Shop Screen -->
+        <div id="shop-screen" class="glass-panel hidden">
+            <h2 style="font-size: 2rem; margin-bottom: 0.5rem;">ARMORY</h2>
+            <div class="subtitle">UNLOCK SKINS</div>
+            
+            <div id="shop-grid">
+                <!-- Generated by JS -->
+            </div>
+
+            <div class="btn-group">
+                <button class="secondary" id="btn-shop-back">Back</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="glass-panel hidden">
+            <h1 style="font-size: 3rem; color: #ef4444; margin-bottom: 1rem;">TERMINATED</h1>
+            
+            <div class="stat-row">
+                <span>Score</span>
+                <span id="end-score">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Orbs Collected</span>
+                <span id="end-orbs" style="color: #6366f1">0</span>
+            </div>
+             <div class="stat-row">
+                <span>Coins Earned</span>
+                <span id="end-coins" style="color: #fbbf24">0</span>
+            </div>
+            
+            <div class="btn-group">
+                <button class="primary" id="btn-retry">Retry</button>
+                <button class="secondary" id="btn-menu">Menu</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="powerup-reference">
+        <h3>Powerup Feed</h3>
+        <ul id="powerup-list"></ul>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        /**
+         * NEON DRIFT 2.3
+         * - Coins (Currency) separated from Orbs (Score)
+         * - Stationary Coins
+         * - Big Skins Button
+         */
+
+        // --- Configuration & Assets ---
+        
+        // Updated Costs: 0, 5, 10, 15, 20
+        const SKINS = [
+            { id: 'default', name: 'Neon White', cost: 0, color: '#ffffff', glow: 'rgba(255,255,255,0.8)' },
+            { id: 'cyber',   name: 'Cyberpunk',  cost: 5, color: '#ec4899', glow: 'rgba(236, 72, 153, 0.8)' },
+            { id: 'matrix',  name: 'Mainframe',  cost: 10, color: '#22c55e', glow: 'rgba(34, 197, 94, 0.8)' },
+            { id: 'gold',    name: 'Midas',      cost: 15, color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.8)' },
+            { id: 'void',    name: 'Void',       cost: 20, color: '#000000', glow: 'rgba(255, 0, 0, 1)', border: '#ff0000' }
+        ];
+
+        const POWERUPS = {
+            TIME:   { id: 'time',   color: '#fbbf24', label: 'TIME WARP',  duration: 400, description: 'Slows the entire grid for precise threading.' },
+            SHIELD: { id: 'shield', color: '#06b6d4', label: 'SHIELD UP',  duration: 300, description: 'Phases a barrier around your core.' },
+            MAGNET: { id: 'magnet', color: '#d946ef', label: 'MAGNET',     duration: 300, description: 'Pulls orbs and coins straight into you.' },
+            BLAST:  { id: 'blast',  color: '#f97316', label: 'BLAST',      duration: 30,  description: 'Wipes every hostile on screen instantly.' }
+        };
+
+        // --- Game System ---
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const powerupListRef = document.getElementById('powerup-list');
+        const powerupReference = document.getElementById('powerup-reference');
+        
+        // State
+        let state = {
+            screen: 'SPLASH', // SPLASH, MODESELECT, SHOP, PLAYING, GAMEOVER
+            mode: 'DRIFT',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            score: 0,
+            highscore: parseInt(localStorage.getItem('nd_highscore')) || 0,
+            currency: parseInt(localStorage.getItem('nd_currency')) || 0,
+            unlockedSkins: JSON.parse(localStorage.getItem('nd_skins')) || ['default'],
+            currentSkinId: localStorage.getItem('nd_currentSkin') || 'default',
+        };
+
+        // Game Objects
+        let player;
+        let entities = [];
+        let particles = [];
+        let activePowerup = null;
+        let powerupTimer = 0;
+        let animationId;
+        
+        // Input
+        const mouse = { x: state.width/2, y: state.height/2 };
+
+        function renderPowerupReference() {
+            if (!powerupListRef) return;
+            powerupListRef.innerHTML = '';
+            Object.values(POWERUPS).forEach((power) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="indicator" style="color:${power.color}"></span>
+                    <div>
+                        <strong>${power.label}</strong><br>
+                        <span style="opacity:0.7;">${power.description}</span>
+                    </div>
+                `;
+                powerupListRef.appendChild(li);
+            });
+        }
+        renderPowerupReference();
+
+        function setPowerupReferenceVisibility(show) {
+            if (!powerupReference) return;
+            powerupReference.classList.toggle('hidden', !show);
+        }
+
+        // --- Saving/Loading ---
+        function saveGame() {
+            localStorage.setItem('nd_highscore', state.highscore);
+            localStorage.setItem('nd_currency', state.currency);
+            localStorage.setItem('nd_skins', JSON.stringify(state.unlockedSkins));
+            localStorage.setItem('nd_currentSkin', state.currentSkinId);
+            updateGlobalCurrency();
+        }
+
+        function updateGlobalCurrency() {
+            document.getElementById('currency-display').innerText = state.currency;
+        }
+
+        // --- UI Handling ---
+        const ui = {
+            splash: document.getElementById('splash-screen'),
+            mode: document.getElementById('mode-screen'),
+            shop: document.getElementById('shop-screen'),
+            gameover: document.getElementById('gameover-screen'),
+            hud: document.getElementById('hud'),
+            
+            scoreVal: document.getElementById('score-val'),
+            powerupLabel: document.getElementById('active-powerup'),
+            modeLabel: document.getElementById('mode-indicator'),
+            
+            updateMenu: () => {
+                document.getElementById('splash-highscore').innerText = state.highscore;
+                updateGlobalCurrency();
+            },
+
+            updateShop: () => {
+                const grid = document.getElementById('shop-grid');
+                grid.innerHTML = '';
+
+                SKINS.forEach(skin => {
+                    const isUnlocked = state.unlockedSkins.includes(skin.id);
+                    const isEquipped = state.currentSkinId === skin.id;
+                    
+                    const el = document.createElement('div');
+                    el.className = `shop-item ${isEquipped ? 'active' : ''} ${!isUnlocked && state.currency < skin.cost ? 'locked' : ''}`;
+                    el.innerHTML = `
+                        <div class="item-name" style="color:${skin.color}">${skin.name}</div>
+                        <div class="item-cost">${isUnlocked ? (isEquipped ? 'EQUIPPED' : 'OWNED') : skin.cost + ' Coins'}</div>
+                    `;
+                    
+                    el.onclick = () => {
+                        if (isUnlocked) {
+                            state.currentSkinId = skin.id;
+                            saveGame();
+                            ui.updateShop();
+                        } else if (state.currency >= skin.cost) {
+                            state.currency -= skin.cost;
+                            state.unlockedSkins.push(skin.id);
+                            state.currentSkinId = skin.id;
+                            saveGame();
+                            ui.updateShop();
+                            ui.updateMenu();
+                        }
+                    };
+                    grid.appendChild(el);
+                });
+            },
+
+            showScreen: (screenName) => {
+                state.screen = screenName;
+                setPowerupReferenceVisibility(screenName !== 'PLAYING');
+                ui.splash.classList.add('hidden');
+                ui.mode.classList.add('hidden');
+                ui.shop.classList.add('hidden');
+                ui.gameover.classList.add('hidden');
+                ui.hud.style.opacity = 0;
+
+                if (screenName === 'SPLASH') {
+                    ui.updateMenu();
+                    ui.splash.classList.remove('hidden');
+                } else if (screenName === 'MODESELECT') {
+                    ui.mode.classList.remove('hidden');
+                } else if (screenName === 'SHOP') {
+                    ui.updateShop();
+                    ui.shop.classList.remove('hidden');
+                } else if (screenName === 'PLAYING') {
+                    ui.hud.style.opacity = 1;
+                    ui.modeLabel.innerText = state.mode + ' MODE';
+                } else if (screenName === 'GAMEOVER') {
+                    document.getElementById('end-score').innerText = state.score;
+                    document.getElementById('end-orbs').innerText = sessionOrbs;
+                    document.getElementById('end-coins').innerText = sessionCoins;
+                    ui.gameover.classList.remove('hidden');
+                }
+            }
+        };
+
+        // --- Game Classes ---
+
+        class Player {
+            constructor() {
+                this.x = state.width / 2;
+                this.y = state.height / 2;
+                this.radius = 16;
+                this.trail = [];
+                this.updateSkin();
+            }
+
+            updateSkin() {
+                const skinData = SKINS.find(s => s.id === state.currentSkinId);
+                this.color = skinData.color;
+                this.glow = skinData.glow;
+                this.hasBorder = skinData.border;
+            }
+
+            update() {
+                // Lerp movement
+                this.x += (mouse.x - this.x) * 0.12;
+                this.y += (mouse.y - this.y) * 0.12;
+
+                // Trail logic
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 12) this.trail.shift();
+            }
+
+            draw() {
+                // Draw Trail
+                if (this.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                    for (let i = 1; i < this.trail.length; i++) {
+                        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                    }
+                    ctx.strokeStyle = this.color;
+                    ctx.globalAlpha = 0.3;
+                    ctx.lineWidth = this.radius;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Draw Shield if active
+                if (activePowerup === 'SHIELD') {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 15, 0, Math.PI * 2);
+                    ctx.strokeStyle = POWERUPS.SHIELD.color;
+                    ctx.lineWidth = 2;
+                    ctx.shadowColor = POWERUPS.SHIELD.color;
+                    ctx.shadowBlur = 10;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Draw Core
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.shadowColor = this.glow;
+                ctx.shadowBlur = 30;
+                
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (this.hasBorder) {
+                    ctx.strokeStyle = this.hasBorder;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        class Entity {
+            constructor() {
+                const margin = 100;
+                
+                // Determine type first to handle stationary coins differently
+                const rand = Math.random();
+                
+                // 5% Powerup, 4% Coin, 40% Orb, 51% Enemy
+                // Slightly increased powerup flow for more pickups mid-run
+                if (rand < 0.05) this.type = 'POWERUP';
+                else if (rand < 0.09) this.type = 'COIN'; 
+                else if (rand < 0.49) this.type = 'ORB';
+                else this.type = 'ENEMY';
+
+                // Spawn logic
+                if (this.type === 'COIN') {
+                    // Coins spawn INSIDE the arena and stay there
+                    const padding = 50;
+                    this.x = padding + Math.random() * (state.width - padding * 2);
+                    this.y = padding + Math.random() * (state.height - padding * 2);
+                    this.velocity = { x: 0, y: 0 }; // Stationary
+                } else {
+                    // Others spawn on edges moving in
+                    if (Math.random() < 0.5) {
+                        this.x = Math.random() < 0.5 ? -margin : state.width + margin;
+                        this.y = Math.random() * state.height;
+                    } else {
+                        this.x = Math.random() * state.width;
+                        this.y = Math.random() < 0.5 ? -margin : state.height + margin;
+                    }
+                }
+
+                // Subtype properties
+                if (this.type === 'POWERUP') {
+                    const keys = Object.keys(POWERUPS);
+                    this.powerType = keys[Math.floor(Math.random() * keys.length)];
+                    this.radius = 12;
+                    this.color = POWERUPS[this.powerType].color;
+                } else if (this.type === 'COIN') {
+                    this.radius = 10;
+                    this.color = '#fbbf24'; // Gold
+                } else if (this.type === 'ORB') {
+                    this.radius = 8;
+                    this.color = '#6366f1';
+                } else {
+                    this.radius = Math.random() * 12 + 6;
+                    this.color = '#ef4444';
+                }
+
+                // Calculate velocity (if not a coin)
+                if (this.type !== 'COIN') {
+                    const targetX = player.x + (Math.random() * 200 - 100);
+                    const targetY = player.y + (Math.random() * 200 - 100);
+                    const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                    
+                    let speed = Math.random() * 3 + 2.2;
+                    
+                    if (this.type === 'ENEMY') {
+                        speed *= state.mode === 'HYPER' ? 2.2 : 1.2;
+                    } else {
+                        speed *= state.mode === 'HYPER' ? 1.6 : 1.1;
+                    }
+
+                    speed += (state.score * 0.0003); 
+                    
+                    this.velocity = {
+                        x: Math.cos(angle) * speed,
+                        y: Math.sin(angle) * speed
+                    };
+                }
+                
+                this.angle = 0;
+                this.spin = (Math.random() - 0.5) * 0.2;
+            }
+
+            update(speedMod) {
+                // Magnet Effect
+                if (activePowerup === 'MAGNET' && this.type !== 'ENEMY') {
+                    this.x += (player.x - this.x) * 0.1;
+                    this.y += (player.y - this.y) * 0.1;
+                } else {
+                    this.x += this.velocity.x * speedMod;
+                    this.y += this.velocity.y * speedMod;
+                }
+                this.angle += this.spin;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = this.color;
+
+                if (this.type === 'ENEMY') {
+                    // Spike shape
+                    ctx.beginPath();
+                    for(let i=0; i<3; i++) {
+                        ctx.rotate(Math.PI * 2 / 3);
+                        ctx.lineTo(this.radius, 0);
+                        ctx.lineTo(0, this.radius);
+                    }
+                    ctx.fill();
+                } else if (this.type === 'POWERUP') {
+                    // Diamond
+                    ctx.fillRect(-this.radius/2, -this.radius/2, this.radius, this.radius);
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(-2, -2, 4, 4);
+                } else if (this.type === 'COIN') {
+                    // Golden Coin
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Inner ring
+                    ctx.strokeStyle = '#fff8';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else {
+                    // Orb
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 1;
+                this.velocity = {x: Math.cos(angle)*speed, y: Math.sin(angle)*speed};
+                this.alpha = 1;
+            }
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.alpha -= 0.02;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- Core Logic ---
+
+        let sessionOrbs = 0;
+        let sessionCoins = 0;
+        let spawnTimer = 0;
+
+        function init(mode) {
+            state.mode = mode;
+            state.score = 0;
+            sessionOrbs = 0;
+            sessionCoins = 0;
+            entities = [];
+            particles = [];
+            activePowerup = null;
+            powerupTimer = 0;
+            
+            player = new Player();
+            
+            ui.scoreVal.innerText = '0';
+            ui.powerupLabel.style.opacity = 0;
+            
+            ui.showScreen('PLAYING');
+            animate();
+        }
+
+        function gameOver() {
+            state.highscore = Math.max(state.score, state.highscore);
+            saveGame();
+            ui.showScreen('GAMEOVER');
+        }
+
+        function activatePowerup(typeKey) {
+            const type = POWERUPS[typeKey];
+            
+            if (typeKey === 'BLAST') {
+                // Instant effect
+                entities = entities.filter(e => e.type !== 'ENEMY'); // Kill all enemies
+                // Screen flash
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0,0,state.width, state.height);
+                createParticles(player.x, player.y, '#fff', 20);
+            } else {
+                // Timed effect
+                activePowerup = typeKey;
+                powerupTimer = type.duration;
+                ui.powerupLabel.innerText = type.label;
+                ui.powerupLabel.style.color = type.color;
+                ui.powerupLabel.style.borderColor = type.color;
+                ui.powerupLabel.style.opacity = 1;
+            }
+        }
+
+        function createParticles(x, y, color, count=8) {
+            for(let i=0; i<count; i++) particles.push(new Particle(x, y, color));
+        }
+
+        function animate() {
+            if (state.screen !== 'PLAYING') return;
+            animationId = requestAnimationFrame(animate);
+
+            // 1. Clear & Background
+            if (activePowerup === 'TIME') ctx.fillStyle = 'rgba(20, 0, 40, 0.25)';
+            else if (activePowerup === 'SHIELD') ctx.fillStyle = 'rgba(0, 20, 40, 0.25)';
+            else ctx.fillStyle = 'rgba(5, 5, 5, 0.25)';
+            
+            ctx.fillRect(0, 0, state.width, state.height);
+
+            // 2. Logic
+            let speedMod = 1;
+            if (activePowerup === 'TIME') speedMod = 0.2;
+
+            if (activePowerup) {
+                powerupTimer--;
+                if (powerupTimer <= 0) {
+                    activePowerup = null;
+                    ui.powerupLabel.style.opacity = 0;
+                }
+            }
+
+            // Spawn
+            spawnTimer++;
+            const spawnThreshold = state.mode === 'HYPER' ? 24 : 34;
+            
+            if (spawnTimer > spawnThreshold) { 
+                spawnTimer = 0;
+                entities.push(new Entity());
+            }
+
+            // Player
+            player.update();
+            player.draw();
+
+            // Particles
+            particles.forEach((p, i) => {
+                p.update();
+                p.draw();
+                if(p.alpha<=0) particles.splice(i,1);
+            });
+
+            // Entities
+            entities.forEach((e, i) => {
+                e.update(speedMod);
+                e.draw();
+
+                // Boundary check
+                if (e.x < -200 || e.x > state.width+200 || e.y < -200 || e.y > state.height+200) {
+                    entities.splice(i, 1);
+                    return;
+                }
+
+                // Collision
+                const dist = Math.hypot(player.x - e.x, player.y - e.y);
+                const collisionThreshold = e.radius + player.radius;
+
+                if (dist < collisionThreshold) {
+                    if (e.type === 'ENEMY') {
+                        if (activePowerup === 'SHIELD') {
+                            // Smash enemy
+                            createParticles(e.x, e.y, e.color);
+                            entities.splice(i, 1);
+                            state.score += (state.mode === 'HYPER' ? 100 : 50);
+                        } else {
+                            // Die
+                            createParticles(player.x, player.y, '#fff', 30);
+                            gameOver();
+                        }
+                    } else if (e.type === 'ORB') {
+                        // Collect for SCORE only
+                        state.score += (state.mode === 'HYPER' ? 200 : 100);
+                        sessionOrbs++;
+                        createParticles(e.x, e.y, e.color);
+                        entities.splice(i, 1);
+                    } else if (e.type === 'COIN') {
+                         // Collect for CURRENCY only
+                        state.currency += 1;
+                        sessionCoins++;
+                        saveGame(); 
+                        createParticles(e.x, e.y, e.color);
+                        entities.splice(i, 1);
+                    } else if (e.type === 'POWERUP') {
+                        // Activate
+                        activatePowerup(e.powerType);
+                        createParticles(e.x, e.y, e.color, 15);
+                        entities.splice(i, 1);
+                    }
+                    
+                    // Update UI
+                    ui.scoreVal.innerText = state.score;
+                }
+            });
+        }
+
+        // --- Event Listeners ---
+
+        window.addEventListener('resize', () => {
+            state.width = canvas.width = window.innerWidth;
+            state.height = canvas.height = window.innerHeight;
+            if (player) { player.x = state.width/2; player.y = state.height/2; }
+        });
+
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('touchmove', e => { 
+            e.preventDefault(); 
+            mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; 
+        }, {passive:false});
+        window.addEventListener('touchstart', e => {
+            mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY;
+        }, {passive:false});
+
+        // Button Mapping
+        // Splash
+        document.getElementById('btn-splash-play').onclick = () => ui.showScreen('MODESELECT');
+        document.getElementById('btn-splash-skins').onclick = () => ui.showScreen('SHOP');
+        
+        // Mode Select
+        document.getElementById('btn-drift').onclick = () => init('DRIFT');
+        document.getElementById('btn-hyper').onclick = () => init('HYPER');
+        document.getElementById('btn-mode-back').onclick = () => ui.showScreen('SPLASH');
+
+        // Shop
+        document.getElementById('btn-shop-back').onclick = () => ui.showScreen('SPLASH');
+
+        // Game Over
+        document.getElementById('btn-retry').onclick = () => init(state.mode);
+        document.getElementById('btn-menu').onclick = () => ui.showScreen('SPLASH');
+
+        // Init
+        state.width = canvas.width = window.innerWidth;
+        state.height = canvas.height = window.innerHeight;
+        updateGlobalCurrency();
+        ui.showScreen('SPLASH');
+
+    </script>
+</body>
+</html>

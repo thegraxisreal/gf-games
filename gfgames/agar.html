@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GF Games | Micro Agar</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(circle at top, #0e0f1a 0%, #05060b 60%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(0,0,0,0.45);
+            font-size: 0.9rem;
+            letter-spacing: 0.1rem;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+
+        .back-button a {
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.2rem;
+            font-weight: 700;
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .back-button a:hover {
+            transform: translateY(-2px);
+            border-color: #fff;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.4);
+            font-size: 0.85rem;
+            letter-spacing: 0.2rem;
+            opacity: 0.75;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="hud">
+        MASS <span id="massValue">10</span> • HIGHSCORE <span id="highValue">10</span>
+    </div>
+    <div class="back-button">
+        <a href="main.html">Back to GF Games</a>
+    </div>
+    <div class="message">Move the mouse to steer – consume pellets & bots, avoid bigger cells.</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const massDisplay = document.getElementById('massValue');
+        const highDisplay = document.getElementById('highValue');
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const arena = { size: 4000 };
+        const mouse = { x: width / 2, y: height / 2 };
+
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        class Cell {
+            constructor(x, y, mass, color, isPlayer = false) {
+                this.x = x;
+                this.y = y;
+                this.mass = mass;
+                this.color = color;
+                this.isPlayer = isPlayer;
+                this.velX = 0;
+                this.velY = 0;
+            }
+
+            get radius() {
+                return Math.sqrt(this.mass) * 4;
+            }
+
+            draw(centerX, centerY, scale) {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 3;
+                ctx.arc(
+                    width / 2 + (this.x - centerX) * scale,
+                    height / 2 + (this.y - centerY) * scale,
+                    this.radius * scale,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.font = `${Math.max(12, this.radius * 0.4 * scale)}px Segoe UI`;
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    Math.round(this.mass),
+                    width / 2 + (this.x - centerX) * scale,
+                    height / 2 + (this.y - centerY + this.radius * 0.2) * scale
+                );
+            }
+
+            update() {
+                this.x += this.velX;
+                this.y += this.velY;
+            }
+        }
+
+        const player = new Cell(0, 0, 10, '#78ffdb', true);
+        const foods = [];
+        const bots = [];
+        let highScore = 10;
+
+        function spawnFood(count = 200) {
+            for (let i = 0; i < count; i++) {
+                foods.push({
+                    x: (Math.random() - 0.5) * arena.size,
+                    y: (Math.random() - 0.5) * arena.size,
+                    mass: Math.random() * 2 + 1,
+                    color: `hsl(${Math.random() * 360}, 80%, 60%)`
+                });
+            }
+        }
+
+        function spawnBots(count = 8) {
+            for (let i = 0; i < count; i++) {
+                bots.push(new Cell(
+                    (Math.random() - 0.5) * arena.size,
+                    (Math.random() - 0.5) * arena.size,
+                    Math.random() * 40 + 15,
+                    `hsl(${Math.random() * 360}, 65%, 55%)`
+                ));
+            }
+        }
+
+        function resetGame() {
+            player.mass = 10;
+            player.x = 0;
+            player.y = 0;
+            foods.length = 0;
+            bots.length = 0;
+            spawnFood();
+            spawnBots();
+        }
+
+        function handlePlayerMovement() {
+            const angle = Math.atan2(mouse.y - height / 2, mouse.x - width / 2);
+            const speed = Math.max(1.5, 8 - Math.sqrt(player.mass) * 0.2);
+            player.velX += Math.cos(angle) * 0.2;
+            player.velY += Math.sin(angle) * 0.2;
+
+            const velMag = Math.hypot(player.velX, player.velY);
+            if (velMag > speed) {
+                player.velX = (player.velX / velMag) * speed;
+                player.velY = (player.velY / velMag) * speed;
+            }
+
+            player.velX *= 0.9;
+            player.velY *= 0.9;
+            player.update();
+
+            player.x = Math.max(-arena.size / 2, Math.min(arena.size / 2, player.x));
+            player.y = Math.max(-arena.size / 2, Math.min(arena.size / 2, player.y));
+        }
+
+        function handleBots() {
+            bots.forEach((bot) => {
+                const dirX = player.x - bot.x;
+                const dirY = player.y - bot.y;
+                const distance = Math.hypot(dirX, dirY);
+                const wantEat = bot.mass > player.mass * 1.2;
+                const baseSpeed = Math.max(1.2, 6 - Math.sqrt(bot.mass) * 0.15);
+                const sign = wantEat ? 1 : -1;
+
+                bot.velX += (dirX / distance || 0) * baseSpeed * 0.05 * sign;
+                bot.velY += (dirY / distance || 0) * baseSpeed * 0.05 * sign;
+
+                bot.velX *= 0.92;
+                bot.velY *= 0.92;
+                bot.update();
+
+                if (Math.abs(bot.x) > arena.size / 2 || Math.abs(bot.y) > arena.size / 2) {
+                    bot.x = (Math.random() - 0.5) * arena.size;
+                    bot.y = (Math.random() - 0.5) * arena.size;
+                }
+            });
+        }
+
+        function circleCollision(a, b) {
+            const dist = Math.hypot(a.x - b.x, a.y - b.y);
+            return dist < a.radius + b.radius;
+        }
+
+        function resolveCollisions() {
+            foods.forEach((food, idx) => {
+                if (circleCollision(player, food)) {
+                    player.mass += food.mass * 0.8;
+                    foods.splice(idx, 1);
+                }
+            });
+            if (foods.length < 150) spawnFood(100);
+
+            bots.forEach((bot, idx) => {
+                if (circleCollision(player, bot)) {
+                    if (player.mass > bot.mass * 1.05) {
+                        player.mass += bot.mass * 0.8;
+                        bots.splice(idx, 1);
+                    } else if (bot.mass > player.mass * 1.05) {
+                        highScore = Math.max(highScore, player.mass);
+                        resetGame();
+                    }
+                }
+            });
+            if (bots.length < 6) spawnBots(2);
+
+            bots.forEach((bot, i) => {
+                bots.forEach((other, j) => {
+                    if (i === j) return;
+                    if (bot.mass > other.mass * 1.1 && circleCollision(bot, other)) {
+                        bot.mass += other.mass * 0.7;
+                        bots.splice(j, 1);
+                    }
+                });
+            });
+        }
+
+        function drawBackground(centerX, centerY, scale) {
+            ctx.fillStyle = '#05060b';
+            ctx.fillRect(0, 0, width, height);
+
+            const gridSize = 100 * scale;
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = (-arena.size / 2 - centerX) * scale; x < (arena.size / 2 - centerX) * scale; x += gridSize) {
+                ctx.moveTo(width / 2 + x, 0);
+                ctx.lineTo(width / 2 + x, height);
+            }
+            for (let y = (-arena.size / 2 - centerY) * scale; y < (arena.size / 2 - centerY) * scale; y += gridSize) {
+                ctx.moveTo(0, height / 2 + y);
+                ctx.lineTo(width, height / 2 + y);
+            }
+            ctx.stroke();
+        }
+
+        function drawFoods(centerX, centerY, scale) {
+            foods.forEach((food) => {
+                ctx.beginPath();
+                ctx.fillStyle = food.color;
+                ctx.arc(
+                    width / 2 + (food.x - centerX) * scale,
+                    height / 2 + (food.y - centerY) * scale,
+                    Math.sqrt(food.mass) * 3 * scale,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            });
+        }
+
+        function render() {
+            const scale = Math.max(0.3, 1.5 - player.radius / 400);
+            drawBackground(player.x, player.y, scale);
+            drawFoods(player.x, player.y, scale);
+
+            bots.forEach((bot) => bot.draw(player.x, player.y, scale));
+            player.draw(player.x, player.y, scale);
+
+            massDisplay.textContent = Math.round(player.mass);
+            highDisplay.textContent = Math.round(highScore);
+        }
+
+        function loop() {
+            handlePlayerMovement();
+            handleBots();
+            resolveCollisions();
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        resetGame();
+        loop();
+    </script>
+</body>
+</html>

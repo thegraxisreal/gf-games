@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sled 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #050b12;
+            background-image: url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3Ccircle cx='140' cy='40' r='3'/%3E%3Ccircle cx='80' cy='120' r='2'/%3E%3Ccircle cx='160' cy='150' r='1.5'/%3E%3Ccircle cx='40' cy='160' r='2.5'/%3E%3Ccircle cx='120' cy='90' r='1.5'/%3E%3Ccircle cx='10' cy='110' r='1.5'/%3E%3Ccircle cx='90' cy='30' r='2.5'/%3E%3Ccircle cx='170' cy='80' r='2'/%3E%3Ccircle cx='60' cy='50' r='1.5'/%3E%3Ccircle cx='30' cy='90' r='1.5'/%3E%3Ccircle cx='150' cy='10' r='2'/%3E%3Ccircle cx='110' cy='150' r='2'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 220px 220px;
+            background-attachment: fixed;
+            user-select: none;
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        .back-button a {
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 10px 18px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .back-button a:hover {
+            transform: translateY(-2px);
+            border-color: #fff;
+        }
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #score-board {
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #speed-meter {
+            color: #ffeb3b;
+            text-shadow: 2px 2px 0 #000;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: right;
+        }
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 10;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+        #start-screen {
+            background-color: transparent;
+        }
+        #start-screen::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 5, 15, 0.98);
+        }
+        #start-screen > .start-card {
+            position: relative;
+            z-index: 1;
+        }
+        .start-card {
+            text-align: center;
+            padding: 40px 50px;
+            border-radius: 32px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            animation: floatCard 4s ease-in-out infinite;
+        }
+        .eyebrow {
+            font-size: 14px;
+            letter-spacing: 0.4rem;
+            color: #a0d8ff;
+            margin-bottom: 12px;
+        }
+        .title {
+            font-size: 56px;
+            margin: 0;
+            letter-spacing: 0.8rem;
+            text-transform: uppercase;
+            color: #ffffff;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .title span {
+            color: #8de1ff;
+        }
+        .title::after {
+            content: '';
+            display: block;
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.2), #8de1ff, rgba(255,255,255,0.2));
+            margin: 20px auto 0;
+        }
+        .subtitle {
+            margin-top: 16px;
+            color: #cfeeff;
+            letter-spacing: 0.3rem;
+            font-size: 0.9rem;
+        }
+        @keyframes floatCard {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        h1 {
+            font-size: 60px;
+            margin: 0 0 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            background: linear-gradient(to bottom, #fff, #b0e0e6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+        }
+        .btn {
+            background: linear-gradient(45deg, #ff512f, #dd2476);
+            border: none;
+            padding: 15px 40px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 50px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        .controls-hint {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #ccc;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+        #game-over-screen {
+            display: none;
+        }
+        /* Speed lines effect */
+        .speed-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 50%, rgba(255, 255, 255, 0.1) 90%);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+    </style>
+    <!-- Load Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Simplex Noise for terrain variation if needed, though we'll use primitives for speed -->
+</head>
+<body>
+
+<div id="game-container"></div>
+<div class="speed-lines" id="speed-lines"></div>
+<div class="back-button">
+    <a href="main.html">Back to GF Games</a>
+</div>
+
+<div id="ui-layer">
+    <div id="score-board">
+        DIST: <span id="dist-display">0</span>m
+    </div>
+    <div id="speed-meter">
+        SPEED: <span id="speed-display">0</span> km/h
+    </div>
+</div>
+
+<div id="start-screen">
+    <div class="start-card">
+        <p class="eyebrow">GF GAMES PRESENTS</p>
+        <h1 class="title">SLED <span>3D</span></h1>
+        <p class="subtitle">infinite downhill gauntlet</p>
+        <div style="margin-top: 30px;">
+            <button class="btn" id="start-btn">Drop In</button>
+        </div>
+        <div class="controls-hint">
+            ← / → or A / D to Steer<br>
+            SPACE / ↑ / W to Jump
+        </div>
+    </div>
+</div>
+
+<div id="game-over-screen">
+    <h1>WIPEOUT!</h1>
+    <p style="font-size: 24px; margin-bottom: 20px;">Distance: <span id="final-score">0</span>m</p>
+    <button class="btn" id="restart-btn">Try Again</button>
+</div>
+
+<script>
+    // --- Game Constants & State ---
+    const LANE_WIDTH = 40; // Total width of play area
+    const BORDER_HEIGHT = 15;
+    const INITIAL_SPEED = 0.3; // Even slower start
+    const MAX_SPEED = 5.0;     // Higher top speed
+    const ACCELERATION = 0.0003; // Slower ramp up
+    const STEER_SPEED = 0.4;
+    const JUMP_FORCE = 0.8;
+    const GRAVITY = 0.04;
+    
+    let gameState = {
+        isPlaying: false,
+        speed: 0,
+        distance: 0,
+        score: 0,
+        frame: 0
+    };
+
+    let player = {
+        x: 0,
+        y: 1.5, // Camera height
+        z: 0,
+        vy: 0,
+        isJumping: false,
+        tilt: 0
+    };
+
+    let keys = {
+        left: false,
+        right: false,
+        space: false
+    };
+
+    // --- Three.js Setup ---
+    const container = document.getElementById('game-container');
+    const scene = new THREE.Scene();
+    // Fog for depth and hiding chunk generation
+    scene.fog = new THREE.FogExp2(0xd6eaf8, 0.015); 
+    scene.background = new THREE.Color(0xd6eaf8);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    sunLight.position.set(50, 100, 50);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 500;
+    scene.add(sunLight);
+
+    // --- Object Pools & Arrays ---
+    const obstacles = [];
+    const particles = [];
+    
+    // Materials
+    const snowMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff, 
+        roughness: 0.8,
+        flatShading: true
+    });
+    
+    const treeMaterials = [
+        new THREE.MeshStandardMaterial({ color: 0x2d4c1e, flatShading: true }), // Dark Green
+        new THREE.MeshStandardMaterial({ color: 0x4a6b36, flatShading: true })  // Lighter Green
+    ];
+    
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+    const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, flatShading: true });
+    const mountainMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xe0e0e0, 
+        roughness: 0.9,
+        flatShading: true 
+    });
+
+    // Geometries (Reuse for performance)
+    const treeGeo = new THREE.ConeGeometry(1.5, 5, 8);
+    const trunkGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 6);
+    const rockGeo = new THREE.DodecahedronGeometry(1.5);
+    const groundChunkGeo = new THREE.PlaneGeometry(LANE_WIDTH, 10);
+    
+    // --- Sled Creation ---
+    let sledMesh;
+    function createSled() {
+        const sled = new THREE.Group();
+        
+        // Main Board
+        const boardGeo = new THREE.BoxGeometry(1.5, 0.1, 3.0);
+        const boardMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // Wood
+        const board = new THREE.Mesh(boardGeo, boardMat);
+        sled.add(board);
+
+        // Runners
+        const runnerGeo = new THREE.BoxGeometry(0.1, 0.1, 3.0);
+        const runnerMat = new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.8, roughness: 0.2 }); // Metal
+        
+        const leftRunner = new THREE.Mesh(runnerGeo, runnerMat);
+        leftRunner.position.set(-0.6, -0.15, 0);
+        sled.add(leftRunner);
+
+        const rightRunner = new THREE.Mesh(runnerGeo, runnerMat);
+        rightRunner.position.set(0.6, -0.15, 0);
+        sled.add(rightRunner);
+
+        // Front Crossbar (Red)
+        const barGeo = new THREE.BoxGeometry(1.5, 0.1, 0.2);
+        const barMat = new THREE.MeshStandardMaterial({ color: 0xcc0000 });
+        const bar = new THREE.Mesh(barGeo, barMat);
+        bar.position.set(0, 0.05, -1.2); // Front (-Z)
+        sled.add(bar);
+
+        return sled;
+    }
+
+    // Add Sled to Scene
+    sledMesh = createSled();
+    scene.add(sledMesh);
+
+    // --- Game Logic Functions ---
+
+    function createPumpkin(x, z) {
+        const group = new THREE.Group();
+
+        // Body
+        const bodyGeo = new THREE.SphereGeometry(1, 16, 16);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff7518, flatShading: true }); // Orange
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.scale.set(1, 0.8, 1); // Flatten slightly
+        body.castShadow = true;
+        group.add(body);
+
+        // Stem
+        const stemGeo = new THREE.CylinderGeometry(0.1, 0.2, 0.5, 6);
+        const stemMat = new THREE.MeshStandardMaterial({ color: 0x2d4c1e }); // Dark Green
+        const stem = new THREE.Mesh(stemGeo, stemMat);
+        stem.position.y = 0.8;
+        group.add(stem);
+
+        // Face Materials
+        const faceMat = new THREE.MeshBasicMaterial({ color: 0x331a00 }); // Dark brown hole
+
+        // Eyes (Triangles)
+        const eyeGeo = new THREE.ConeGeometry(0.25, 0.1, 3);
+        
+        const leftEye = new THREE.Mesh(eyeGeo, faceMat);
+        leftEye.position.set(-0.35, 0.2, 0.8);
+        leftEye.rotation.x = Math.PI / 2; // Face forward
+        leftEye.rotation.z = -0.2; // Tilt eye
+        group.add(leftEye);
+
+        const rightEye = new THREE.Mesh(eyeGeo, faceMat);
+        rightEye.position.set(0.35, 0.2, 0.8);
+        rightEye.rotation.x = Math.PI / 2;
+        rightEye.rotation.z = 0.2; // Tilt eye
+        group.add(rightEye);
+
+        // Mouth (Box)
+        const mouthGeo = new THREE.BoxGeometry(0.6, 0.15, 0.1);
+        const mouth = new THREE.Mesh(mouthGeo, faceMat);
+        mouth.position.set(0, -0.2, 0.85);
+        // Curve the mouth slightly by adding rotation if we used segments, but simple box works for pixel art style
+        mouth.rotation.z = (Math.random() - 0.5) * 0.2; // A little crooked
+        group.add(mouth);
+
+        group.position.set(x, 1, z);
+        
+        // Face the camera with slight variation
+        group.rotation.y = (Math.random() - 0.5) * 0.5;
+
+        scene.add(group);
+        // Pumpkins act like rocks (jumpable if player is high enough)
+        return { mesh: group, type: 'rock', active: true, radius: 1.0 };
+    }
+
+    function createTree(x, z) {
+        const group = new THREE.Group();
+        
+        const trunk = new THREE.Mesh(trunkGeo, trunkMaterial);
+        trunk.position.y = 0.5;
+        trunk.castShadow = true;
+        group.add(trunk);
+
+        const leaves = new THREE.Mesh(treeGeo, treeMaterials[Math.floor(Math.random() * treeMaterials.length)]);
+        leaves.position.y = 3;
+        leaves.castShadow = true;
+        group.add(leaves);
+
+        // Snow on top of tree
+        const snowCap = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.5, 8), snowMaterial);
+        snowCap.position.y = 4.5;
+        group.add(snowCap);
+
+        group.position.set(x, 0, z);
+        
+        // Add random scale variation
+        const scale = 0.8 + Math.random() * 0.6;
+        group.scale.set(scale, scale, scale);
+
+        scene.add(group);
+        return { mesh: group, type: 'tree', active: true, radius: 1.0 * scale };
+    }
+
+    function createRock(x, z) {
+        const rock = new THREE.Mesh(rockGeo, rockMaterial);
+        rock.castShadow = true;
+        rock.position.set(x, 1, z);
+        rock.rotation.set(Math.random(), Math.random(), Math.random());
+        const scale = 0.8 + Math.random() * 0.8;
+        rock.scale.set(scale, scale, scale);
+        
+        scene.add(rock);
+        return { mesh: rock, type: 'rock', active: true, radius: 1.2 * scale };
+    }
+
+    // Ground Plane (Infinite scrolling illusion)
+    // We actually move objects towards camera, but keep ground static texture?
+    // Better: Moving stripes on ground to show speed
+    const groundGeo = new THREE.PlaneGeometry(200, 400, 20, 20);
+    // Displace vertices for bumps
+    const posAttribute = groundGeo.attributes.position;
+    for (let i = 0; i < posAttribute.count; i++) {
+        const x = posAttribute.getX(i);
+        const y = posAttribute.getY(i); // This is Z in 2D space before rotation
+        // Keep center lane relatively smooth
+        if (Math.abs(x) > 5) {
+            posAttribute.setZ(i, Math.random() * 1.5); // Z becomes Y after rotation
+        } else {
+            posAttribute.setZ(i, Math.random() * 0.2); 
+        }
+    }
+    groundGeo.computeVertexNormals();
+
+    const ground = new THREE.Mesh(groundGeo, snowMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.z = -100; // Center it ahead
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Snow Particles
+    for(let i=0; i<400; i++) {
+        const pGeo = new THREE.BoxGeometry(0.1, 0.1, 0.4); // Streak shape
+        const pMat = new THREE.MeshBasicMaterial({color: 0xffffff, opacity: 0.6, transparent: true});
+        const p = new THREE.Mesh(pGeo, pMat);
+        resetParticle(p);
+        particles.push(p);
+        scene.add(p);
+    }
+
+    function resetParticle(p) {
+        p.position.x = (Math.random() - 0.5) * 60;
+        p.position.y = Math.random() * 20;
+        p.position.z = -50 - Math.random() * 100;
+        p.velocityZ = 0.5 + Math.random();
+    }
+
+    // --- Core Game Functions ---
+
+    function initGame() {
+        // Clear old objects
+        obstacles.forEach(obj => scene.remove(obj.mesh));
+        obstacles.length = 0;
+        
+        // Reset State
+        gameState.speed = INITIAL_SPEED;
+        gameState.distance = 0;
+        gameState.score = 0;
+        gameState.isPlaying = true;
+        
+        player.x = 0;
+        player.y = 1.5;
+        player.vy = 0;
+        player.isJumping = false;
+        player.tilt = 0;
+
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('speed-lines').style.opacity = 0;
+    }
+
+    function gameOver() {
+        gameState.isPlaying = false;
+        document.getElementById('final-score').innerText = Math.floor(gameState.distance);
+        document.getElementById('game-over-screen').style.display = 'flex';
+        document.getElementById('speed-lines').style.opacity = 0;
+    }
+
+    function spawnObstacle() {
+        // Spawn chance based on speed/difficulty
+        // Spawn further away (-Z)
+        const spawnZ = -180;
+        const xPos = (Math.random() - 0.5) * (LANE_WIDTH - 4); // Keep slightly within walls
+        
+        const rand = Math.random();
+        let obj;
+        
+        if (rand > 0.3) {
+            // 70% chance for Tree
+            obj = createTree(xPos, spawnZ);
+        } else {
+            // 30% chance for Rock Category
+            // Inside Rock category: 1 in 10 chance for Pumpkin
+            if (Math.random() < 0.1) {
+                obj = createPumpkin(xPos, spawnZ);
+            } else {
+                obj = createRock(xPos, spawnZ);
+            }
+        }
+        
+        obstacles.push(obj);
+    }
+
+    function updatePhysics() {
+        // Steer
+        if (keys.left) {
+            player.x -= STEER_SPEED;
+            player.tilt = THREE.MathUtils.lerp(player.tilt, 0.3, 0.1);
+        } else if (keys.right) {
+            player.x += STEER_SPEED;
+            player.tilt = THREE.MathUtils.lerp(player.tilt, -0.3, 0.1);
+        } else {
+            player.tilt = THREE.MathUtils.lerp(player.tilt, 0, 0.1);
+        }
+
+        // Clamp Player X
+        const maxOffset = LANE_WIDTH / 2 - 2;
+        if (player.x < -maxOffset) player.x = -maxOffset;
+        if (player.x > maxOffset) player.x = maxOffset;
+
+        // Jump / Gravity
+        if (keys.space && !player.isJumping) {
+            player.vy = JUMP_FORCE;
+            player.isJumping = true;
+        }
+
+        player.y += player.vy;
+        
+        // Ground Check
+        const groundHeight = 1.5; // Base camera height
+        if (player.y > groundHeight) {
+            player.vy -= GRAVITY;
+        } else {
+            player.y = groundHeight;
+            player.vy = 0;
+            player.isJumping = false;
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        if (!gameState.isPlaying) return;
+
+        // Increase Speed
+        if (gameState.speed < MAX_SPEED) {
+            gameState.speed += ACCELERATION;
+        }
+        gameState.distance += gameState.speed;
+
+        // UI Update
+        document.getElementById('dist-display').innerText = Math.floor(gameState.distance);
+        document.getElementById('speed-display').innerText = Math.floor(gameState.speed * 40); // Fake km/h
+        
+        // Speed lines effect intensity
+        const speedRatio = (gameState.speed - INITIAL_SPEED) / (MAX_SPEED - INITIAL_SPEED);
+        document.getElementById('speed-lines').style.opacity = speedRatio * 0.8;
+
+        updatePhysics();
+
+        // Update Camera
+        // First person view: Camera follows player X/Y.
+        // Shake effect at high speed
+        const shake = (gameState.speed > 2.0) ? (Math.random() - 0.5) * 0.1 : 0;
+        
+        camera.position.set(player.x + shake, player.y + shake, player.z);
+        // Tilt camera into turns
+        camera.rotation.z = player.tilt;
+        
+        // Pitch camera slightly down to see ground better
+        camera.rotation.x = -0.1;
+
+        // Update Sled Position to follow camera
+        if (sledMesh) {
+            sledMesh.position.x = player.x;
+            
+            // Fix: Dynamic lift. When tilting, raise the sled so the lower runner doesn't clip.
+            // We add a value based on the absolute tilt angle.
+            const turnLift = Math.abs(player.tilt) * 1.0;
+            sledMesh.position.y = (player.y - 1.0) + turnLift; 
+            
+            sledMesh.position.z = player.z - 1.5; // In front of camera
+            
+            sledMesh.rotation.z = player.tilt;
+            // Add slight pitch effect when jumping/landing
+            sledMesh.rotation.x = -player.vy * 0.3; 
+        }
+
+        // Move Obstacles (Simulate player moving forward)
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obj = obstacles[i];
+            obj.mesh.position.z += gameState.speed * 2; // Multiplier to make world move fast
+
+            // Collision Detection
+            // Simple distance check in 2D (ignore height for lenient gameplay or check Y for jump)
+            const dz = obj.mesh.position.z - player.z;
+            const dx = obj.mesh.position.x - player.x;
+            
+            // Hit box logic
+            // Z range: close to camera (0)
+            if (dz > -2 && dz < 2 && Math.abs(dx) < (obj.radius + 0.5)) {
+                // Check height - if player is high enough, jump over?
+                // Trees are tall, rocks are short.
+                if (obj.type === 'rock' && player.y > 3) {
+                    // Jumped over!
+                } else {
+                    gameOver();
+                }
+            }
+
+            // Cleanup
+            if (obj.mesh.position.z > 10) {
+                scene.remove(obj.mesh);
+                obstacles.splice(i, 1);
+            }
+        }
+
+        // Spawn Loop
+        // Calculate base rate based on speed
+        let spawnRate = 0.1 + (gameState.speed * 0.05);
+
+        // If under 750m, ease the density
+        if (gameState.distance < 750) {
+            // Factor goes from 0.4 (at dist 0) to 1.0 (at dist 750)
+            const easyModeFactor = 0.4 + (gameState.distance / 750) * 0.6;
+            spawnRate *= easyModeFactor;
+        }
+
+        if (Math.random() < spawnRate) {
+            spawnObstacle();
+        }
+
+        // Particles (Snow/Wind)
+        particles.forEach(p => {
+            p.position.z += gameState.speed * 3; // Move faster than terrain for wind effect
+            if (p.position.z > 5) {
+                resetParticle(p);
+            }
+        });
+
+        renderer.render(scene, camera);
+    }
+
+    // --- Input Handling ---
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+        // Expanded Jump Controls
+        if (e.key === ' ' || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.space = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        if (e.key === ' ' || e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.space = false;
+    });
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Button Listeners
+    document.getElementById('start-btn').addEventListener('click', () => {
+        initGame();
+        animate();
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', () => {
+        initGame();
+    });
+
+    // Initial render
+    renderer.render(scene, camera);
+    // Start animation loop to keep rendering background even when not playing (optional)
+    animate();
+
+</script>
+</body>
+</html>
