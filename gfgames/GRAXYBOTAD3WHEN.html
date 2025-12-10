@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Snake Embed</title>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        .top-bar {
+            width: 100%;
+            background: #111;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .back-btn {
+            background: #444;
+            color: white;
+            padding: 10px 16px;
+            text-decoration: none;
+            font-family: sans-serif;
+            border-radius: 4px;
+        }
+
+        .back-btn:hover {
+            background: #666;
+        }
+
+        iframe {
+            width: 100%;
+            height: calc(100% - 50px);
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <a class="back-btn" href="https://gfgames.vercel.app/main.html">BACK TO GF GAMES</a>
+    </div>
+
+    <iframe src="https://googlesnake.org/snake/" allowfullscreen></iframe>
+
+</body>
+</html>
